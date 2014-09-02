@@ -3,7 +3,7 @@
 Singeton DB Class
 Created 24/7/14 - Cian
 */
-class DB {
+class DB implements Countable {
 	private static $_instance = null;
 	private static $_pastQueries = [];
 
@@ -82,7 +82,7 @@ class DB {
 		return $this;
 	}
 	
-	public function pluck($Columns = array()){
+	public function pluck(array $Columns = array()){
 		//Pluck Certain rows
 		if($this->_columns === "*" && count($Columns) > 0){
 			$this->_columns = "";
@@ -112,7 +112,7 @@ class DB {
 		return $this->_results;
 	}
 	
-	public function update($data){
+	public function update(array $data){
 		$update = "";
 		foreach($data as $column => $value){
 			$update .= $column."='".$value."',";
@@ -131,7 +131,7 @@ class DB {
 		return $this->_results;
 	}
 	
-	public function insert($data, $Multiple = false){
+	public function insert(array $data, $Multiple = false){
 		//Second paramter dictates if more than one row is being inserted
 		if($Multiple === false){
 			$WorkData = array($data);
@@ -159,7 +159,7 @@ class DB {
 		return $this->_results;
 	}
 	
-	public function insertGetId($data){
+	public function insertGetId(array $data){
 		$this->insert($data);
 		return $this->_pdo->lastInsertId();
 	}
@@ -227,8 +227,11 @@ class DB {
 		return false;
 	}
 
-	public function setQuery($Query){
-		$this->_query = $Query;
+	public function setQuery(array $Query){
+		$this->_query   = $Query["Query"];
+		$this->_columns = $Query["Columns"];
+		$this->_start   = $Query["Start"];
+		$this->_table   = $Query["Table"];
 	}
 
 	public function tagQuery($name="", $value = null){

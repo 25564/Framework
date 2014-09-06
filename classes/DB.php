@@ -3,7 +3,8 @@
 Singeton DB Class
 Created 24/7/14 - Cian
 */
-class DB implements Countable {
+
+class DB implements Countable, arrayaccess {
 	private static $_instance = null;
 	private static $_pastQueries = [];
 
@@ -250,5 +251,25 @@ class DB implements Countable {
 	public function dumpPrevious(){
 		return self::$_pastQueries;
 	}
+
+    public function offsetSet($offset, $value) {
+	    if (is_null($offset)) {
+	        array_push($this->$_results, $value);
+	    } else {
+	        $this->_results[$offset] = $value;
+	    }
+    }
+
+    public function offsetExists($offset) {
+        return isset($this->_results[$offset]);
+    }
+
+    public function offsetUnset($offset) {
+        unset($this->_results[$offset]);
+    }
+
+    public function offsetGet($offset) {
+    	return $this->skip($offset - 1)->get(1);
+    }
 }
 ?>

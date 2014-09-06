@@ -27,42 +27,42 @@ class DB implements Countable, arrayaccess, Iterator {
 	}
 	
 	public static function getInstance() {
-		//Calling this static function initiates the class 
-		// this class can be called by:
-		//DB::getInstance()->get('users', array('username', '=', '25564'))
+		//Singleton getInstance()
 		if(!isset(self::$_instance)){
 			self::$_instance = new DB();
 		}
 		return self::$_instance;
 	}
 	
-	public function query($sql, $params = array()){
+	private function query($sql, $params = array()){
 		//Raw Query
-
-		//Uses binding so the sql send should be use ? as place holders then parameters in a seperatea array. An example of this is:
-		//DB::getInstance()->query('SELECT * FROM `user` WHERE `username`=? AND `group`= ?', array('25564', 2)) This prevents SQL injection
-		//The above query would be processed as SELECT * FROM `user` WHERE `username`='25564' AND `group`= 2
 		$this->_error = false;
-		
+		$this->tagQuery();
 		if($this->_query = $this->_pdo->prepare($sql)){
 			$x = 1;
-			if(count($params)){
+			if(!empty($params)){
 				foreach($params as $param){
 					$this->_query->bindValue($x, $param);	
 					$x++;
 				}
 			}
-			
 			if($this->_query->execute()){
-				$this->_results = $this->_query->fetchAll(PDO::FETCH_OBJ);
-				$this->_query = "";
+				return true;				
 			}
 			else {
 				$this->_error = true;	
-			}
+			}		
 		}
+		return false;
 	}
 	
+	public function raw($sql,  $params = array()){
+		$this->query($sql,  $params);
+		$this->_results = $this->_query->fetchAll(PDO::FETCH_OBJ);
+		$this->clearQuery();
+		return $this->results();
+	}
+
 	public function table($table) {
 		$this->_table = $table;
 		return $this;
@@ -97,9 +97,10 @@ class DB implements Countable, arrayaccess, Iterator {
 	}
 	
 	public function count(){
-		$Query = $this->_pdo->query("SELECT ".$this->_columns." FROM ".$this->_table." ".$this->_query);
+		$this->query("SELECT ".$this->_columns." FROM ".$this->_table." ".$this->_query);
+		$this->_results = $this->_query->rowCount();
 		$this->clearQuery();
-		return $Query->rowCount();
+		return $this->_results;
 	}
 	
 	public function get($number = null) {
@@ -108,34 +109,30 @@ class DB implements Countable, arrayaccess, Iterator {
 		} else {
 			$sql = "SELECT ".$this->_columns." FROM ".$this->_table." ".$this->_query." LIMIT " . $this->_start . ",".$number;
 		}
-		$Query = $this->_pdo->query($sql);
-		$this->_results = $Query->fetchAll(PDO::FETCH_OBJ);
-		$this->clearQuery();
+		$Query = $this->query($sql);
+		$this->_results = $this->_query->fetchAll(PDO::FETCH_OBJ);
 		return $this->_results;
 	}
 	
 	public function update(array $data){
-		$update = "";
+		$update = array();
 		foreach($data as $column => $value){
-			$update .= $column."='".$value."',";
+			$update[] = $column."='".$value."'";
 		}
-
-		$update = substr($update, 0, -1);
-
-		$this->_results = $this->_pdo->query("UPDATE ".$this->_table." SET ".$update." ".$this->_query);
+		$this->_results = $this->query("UPDATE ".$this->_table." SET ".implode(",", $update)." ".$this->_query);
 		$this->clearQuery();
 		return $this->_results;
 	}
 
 	public function delete() {
-		$this->_results = $this->_pdo->query("DELETE FROM ".$this->_table." ".$this->_query);
-		$this->_query = "";
+		$this->_results = $this->query("DELETE FROM ".$this->_table." ".$this->_query);
+		$this->clearQuery();
 		return $this->_results;
 	}
 	
-	public function insert(array $data, $Multiple = false){
+	public function insert(array $data, $MultipleRows = false){
 		//Second paramter dictates if more than one row is being inserted
-		if($Multiple === false){
+		if($MultipleRows === false){
 			$WorkData = array($data);
 		} else {
 			$WorkData = $data;
@@ -149,16 +146,21 @@ class DB implements Countable, arrayaccess, Iterator {
 			$rowValues = array();
 			foreach($WorkData[$row] as $column => $value)
 			{
-				$columns[] = $column;
-				$rowValues[] = $value;
+				$columns[] = "`" . $column . "`";
+				$rowValues[] = "'" . $value . "'";
 			}
 			$columnCount = count($rowValues);
 			$values[] = "(" . implode(",", $rowValues) . ")";
 			$row++;
-		} while ($Multiple === true && $row < count($data));
+		} while ($MultipleRows === true && $row < count($data));
 
-		$this->_results = $this->_pdo->query("INSERT INTO " . $this->_table . " (" . implode(",", array_slice($columns, 0, $columnCount)) . ") VALUES " . implode(",", $values));
+		$this->_results = $this->query("INSERT INTO " . $this->_table . " (" . implode(",", array_slice($columns, 0, $columnCount)) . ") VALUES " . implode(",", $values));
+		$this->clearQuery();
 		return $this->_results;
+	}
+
+	public function hasError(){
+		return $this->_error;
 	}
 	
 	public function insertGetId(array $data){
@@ -198,6 +200,7 @@ class DB implements Countable, arrayaccess, Iterator {
 		if($this->hasQuery()) {
 			return $this->_query;
 		}
+		return false;
 	}
 	
 	public function results(){
@@ -214,7 +217,6 @@ class DB implements Countable, arrayaccess, Iterator {
 	}
 
 	private function clearQuery(){
-		$this->tagQuery();
 		$this->_query = "";
 	}
 
@@ -238,12 +240,21 @@ class DB implements Countable, arrayaccess, Iterator {
 
 	public function tagQuery($name="", $value = null){
 		if($value == null){
-			self::$_pastQueries[$name] = array(
-				"Query" 	=> $this->_query,
-				"Columns"	=> $this->_columns,
-				"Start"		=> $this->_start,
-				"Table"		=> $this->_table
-			);
+			if($name != ""){
+				self::$_pastQueries[$name] = array(
+					"Query" 	=> $this->_query,
+					"Columns"	=> $this->_columns,
+					"Start"		=> $this->_start,
+					"Table"		=> $this->_table
+				);
+			} else {
+				self::$_pastQueries[] = array(
+					"Query" 	=> $this->_query,
+					"Columns"	=> $this->_columns,
+					"Start"		=> $this->_start,
+					"Table"		=> $this->_table
+				);
+			}
 		} else {
 			self::$_pastQueries[$name] = $value;
 		}
@@ -273,24 +284,24 @@ class DB implements Countable, arrayaccess, Iterator {
     	return $this->skip($offset - 1)->get(1);
     }
 
-    function rewind() {
+    public function rewind() {
         $this->_position = 0;
         $this->get();
     }
 
-    function current() {
+    public function current() {
         return $this->_results[$this->_position];
     }
 
-    function key() {
+    public function key() {
         return $this->_position;
     }
 
-    function next() {
+    public function next() {
         ++$this->_position;
     }
 
-    function valid() {
+    public function valid() {
         return isset($this->_results[$this->_position]);
     }
 }

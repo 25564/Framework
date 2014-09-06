@@ -69,7 +69,7 @@ class BlogPost {
 					return $this->_db->table('blog_posts')->skip(($this->getPage()-1)*$this->_postLimit)->where('author', $identifier[$Type[0]])->orderBy('id', 'DESC')->get($this->_postLimit);
 				break;
 				case 'tag':
-				    return $this->_db->query("SELECT blog_posts.* FROM blog_tags LEFT JOIN (blog_posts) ON (blog_tags.id = blog_posts.id) WHERE blog_tags.tag =? ORDER BY blog_posts.id DESC  LIMIT ".($this->getPage()-1)*$this->_postLimit."," . $this->_postLimit, array($identifier[$Type[0]]));
+				    return $this->_db->raw("SELECT blog_posts.* FROM blog_tags LEFT JOIN (blog_posts) ON (blog_tags.id = blog_posts.id) WHERE blog_tags.tag =? ORDER BY blog_posts.id DESC  LIMIT ".($this->getPage()-1)*$this->_postLimit."," . $this->_postLimit, array($identifier[$Type[0]]));
 				break;
 				case 'normal':
 					return $this->_db->table('blog_posts')->skip(($this->getPage()-1)*$this->_postLimit)->where('visible', 0)->orderBy('id', 'DESC')->get($this->_postLimit);

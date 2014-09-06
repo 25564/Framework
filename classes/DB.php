@@ -4,7 +4,7 @@ Singeton DB Class
 Created 24/7/14 - Cian
 */
 
-class DB implements Countable, arrayaccess {
+class DB implements Countable, arrayaccess, Iterator {
 	private static $_instance = null;
 	private static $_pastQueries = [];
 
@@ -15,6 +15,7 @@ class DB implements Countable, arrayaccess {
 			$_results, 
 			$_columns = "*",
 			$_table = null,
+			$_position = 0,
 			$_count = 0;
 
 	private function __construct() {
@@ -270,6 +271,27 @@ class DB implements Countable, arrayaccess {
 
     public function offsetGet($offset) {
     	return $this->skip($offset - 1)->get(1);
+    }
+
+    function rewind() {
+        $this->_position = 0;
+        $this->get();
+    }
+
+    function current() {
+        return $this->_results[$this->_position];
+    }
+
+    function key() {
+        return $this->_position;
+    }
+
+    function next() {
+        ++$this->_position;
+    }
+
+    function valid() {
+        return isset($this->_results[$this->_position]);
     }
 }
 ?>

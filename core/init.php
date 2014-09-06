@@ -1,12 +1,14 @@
 <?php 
-session_start();
+if(session_id() == '') { //Just incase a session is already set
+    session_start(); //Set session if not set already
+}
 
 $GLOBALS['config'] = array( //Config
 	'mysql' => array(
 		'host' => 'localhost',
 		'username' => 'root',
 		'password' => '',
-		'db' => 'krypto',
+		'db' => 'framework',
 	),
 	'remember' => array(
 		'cookie_name' => 'hash',

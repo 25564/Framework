@@ -1,5 +1,7 @@
 <?php
 class Report {
+	//Originally for a feedback
+
 	private $_db,
 			$_data,
 			$_user = null,
@@ -28,38 +30,13 @@ class Report {
 		}
 	}
 	
-	private function inString($needle, $haystack, $delimeter = ','){
-		//Helper Function for dealing with Views
-		$Array = explode($delimeter, $haystack);
-		if(in_array($needle, $Array)){
-			return true;	
-		}
-		else {
-			return false;	
-		}
-	}
-	
-	private function addToString($needle, $haystack, $delimeter = ','){
-		//Helper Function for dealing with Views
-		return $haystack . $delimeter . $needle;
-	}
-	
-	private function removeFromString($needle, $haystack, $delimeter = ',') {
-		//Helper Function for dealing with Views
-		$Array = explode($delimeter, $haystack);
-		while(($i = array_search($needle, $Array)) !== false) {
-			unset($Array[$i]);
-		}
-		return implode($delimeter, $Array);
-	}
-	
 	public function view(){
 		//Increments the view counter and adds the user to the viewed list
 		if($this->_user->isLoggedIn()){
-			if($this->_user->data()->username != $this->data()->author && !$this->inString($this->_user->data()->username, $this->data()->view_users)){
+			if($this->_user->data()->username != $this->data()->author && !CSV::containsString($this->_user->data()->username, $this->data()->view_users)){
 				$this->_db->update('reports', array('id', '=', $this->data()->id), array(
 					'view_count' => $this->data()->view_count + 1, 
-					'view_users' => $this->addToString($this->_user->data()->username, $this->data()->view_users)
+					'view_users' => CSV::addString($this->_user->data()->username, $this->data()->view_users)
 				));
 			}
 		} else {
@@ -70,20 +47,20 @@ class Report {
 	private function spamFree($ip, $text=""){
 		//Returns true if not spam
 		if($this->_user->isLoggedIn()){
-			$AccountSpam = $this->_db->table('reports')->where('author', $this->_user->data()->username)->where('time_posted','>',Time::get()-604800)->count();
+			$AccountSpam = count($this->_db->table('reports')->where('author', $this->_user->data()->username)->where('time_posted','>',Time::get()-604800));
 			if($AccountSpam >= Config::get("reports/spam_filter_count")){
 				throw new Exception('You can only post two reports a week in order to prevent spam');
 				return false;
 			}
 		}		
 		
-		$IdenticalCheck = $this->_db->table('reports')->where('LOWER(`text`)', strtolower($text))->count();
+		$IdenticalCheck = count($this->_db->table('reports')->where('LOWER(`text`)', strtolower($text)));
 		if($IdenticalCheck != 0){
 			throw new Exception('Identical post was detected');
 			return false;
 		} 
 		
-		$IPSpam = $this->_db->table('reports')->where('ip',  $ip)->where('time_posted', '>', Time::get() - 604800)->count();
+		$IPSpam = count($this->_db->table('reports')->where('ip',  $ip)->where('time_posted', '>', Time::get() - 604800));
 		if($IPSpam >= Config::get("reports/spam_filter_count")){
 			throw new Exception('This IP address has hit its maximum reports for this week');
 			return false;
@@ -99,8 +76,7 @@ class Report {
 	
 	public function getPagesNeeded(){
 		$PostCount = Config::get("reports/reports_displayed_per_page");
-		$Query = $this->_db->table("reports")->where('visible', 0);
-		return ceil($Query->count()/2);
+		return ceil(count($this->_db->table("reports")->where('visible', 0))/2);
 	}
 	
 	public function hide($id){

@@ -111,6 +111,7 @@ class DB implements Countable, arrayaccess, Iterator {
 		}
 		$Query = $this->query($sql);
 		$this->_results = $this->_query->fetchAll(PDO::FETCH_OBJ);
+		$this->clearQuery();
 		return $this->_results;
 	}
 	

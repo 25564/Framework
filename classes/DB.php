@@ -8,18 +8,17 @@ class DB implements Countable, arrayaccess, Iterator {
 	private static $_instance = null;
 	private static $_pastQueries = [];
 
-	private $_pdo, 
-			$_query, 
-			$_error = false, 
-			$_start = 0,
-			$_results, 
-			$_columns = "*",
-			$_table = null,
-			$_position = 0,
-			$_count = 0;
+	private $_pdo, //PDO connection
+			$_query, //The query
+			$_error = false, //Has an error occured
+			$_start = 0, //How many rows should be skiped. This is set by skip(Amount)
+			$_results, //Result of the query
+			$_columns = "*", //Columns being returned. This can be altered by pluck()
+			$_table = null, //Table query acts upon
+			$_position = 0; //Current Array iterator increment
 
 	private function __construct() {
-		try {
+		try { //Try DB Connection with Config settings
 			$this->_pdo = new PDO('mysql:host='.Config::get('mysql/host').';dbname='.Config::get('mysql/db').'', Config::get('mysql/username'), Config::get('mysql/password'));
 		} catch(PDOException $e){
 			die($e->getMessage());	
@@ -34,8 +33,10 @@ class DB implements Countable, arrayaccess, Iterator {
 		return self::$_instance;
 	}
 	
+//Base Query functions
+
 	private function query($sql, $params = array()){
-		//Raw Query
+		//Query DB
 		$this->_error = false;
 		$this->tagQuery();
 		if($this->_query = $this->_pdo->prepare($sql)){
@@ -57,13 +58,88 @@ class DB implements Countable, arrayaccess, Iterator {
 	}
 	
 	public function raw($sql,  $params = array()){
+		//Raw query
 		$this->query($sql,  $params);
 		$this->_results = $this->_query->fetchAll(PDO::FETCH_OBJ);
 		$this->clearQuery();
 		return $this->results();
 	}
 
-	public function table($table) {
+//Operation Types
+
+	public function count(){
+		$this->query("SELECT ".$this->_columns." FROM ".$this->_table." ".$this->_query);
+		$this->_results = $this->_query->rowCount();
+		$this->clearQuery();
+		return $this->_results;
+	}
+	
+	public function get($number = null) {//Select row data
+		if(!$number){
+			$sql = "SELECT ".$this->_columns." FROM ".$this->_table." ".$this->_query;
+		} else {
+			$sql = "SELECT ".$this->_columns." FROM ".$this->_table." ".$this->_query." LIMIT " . $this->_start . ",".$number;
+		}
+		$Query = $this->query($sql);
+		$this->_results = $this->_query->fetchAll(PDO::FETCH_OBJ);
+		$this->clearQuery();
+		return $this->_results;
+	}
+	
+	public function update(array $data){//Update row data
+		$update = array();
+		foreach($data as $column => $value){
+			$update[] = $column."='".$value."'";
+		}
+		$this->_results = $this->query("UPDATE ".$this->_table." SET ".implode(",", $update)." ".$this->_query);
+		$this->clearQuery();
+		return $this->_results;
+	}
+
+	public function delete() {//Delete rows
+		$this->_results = $this->query("DELETE FROM ".$this->_table." ".$this->_query);
+		$this->clearQuery();
+		return $this->_results;
+	}
+	
+	public function insert(array $data, $MultipleRows = false){ //DB Insert function
+		//Second paramter dictates if more than one row is being inserted
+		if($MultipleRows === false){
+			$WorkData = array($data);
+		} else {
+			$WorkData = $data;
+		}
+		$columns = array();
+		$values = array();
+		$row = 0;
+		$columnCount = 0;
+		
+		do {
+			$rowValues = array();
+			foreach($WorkData[$row] as $column => $value)
+			{
+				$columns[] = "`" . $column . "`";
+				$rowValues[] = "'" . $value . "'";
+			}
+			$columnCount = count($rowValues);
+			$values[] = "(" . implode(",", $rowValues) . ")";
+			$row++;
+		} while ($MultipleRows === true && $row < count($data));
+
+		$this->_results = $this->query("INSERT INTO " . $this->_table . " (" . implode(",", array_slice($columns, 0, $columnCount)) . ") VALUES " . implode(",", $values));
+		$this->clearQuery();
+		return $this->_results;
+	}
+	
+	public function insertGetId(array $data){
+		//Inserts data then returns the ID
+		$this->insert($data);
+		return $this->_pdo->lastInsertId();
+	}
+	
+//Query Builder functions
+
+	public function table($table) {//Set the table that is being acted upon
 		$this->_table = $table;
 		return $this;
 	}
@@ -96,79 +172,6 @@ class DB implements Countable, arrayaccess, Iterator {
 		return $this;
 	}
 	
-	public function count(){
-		$this->query("SELECT ".$this->_columns." FROM ".$this->_table." ".$this->_query);
-		$this->_results = $this->_query->rowCount();
-		$this->clearQuery();
-		return $this->_results;
-	}
-	
-	public function get($number = null) {
-		if(!$number){
-			$sql = "SELECT ".$this->_columns." FROM ".$this->_table." ".$this->_query;
-		} else {
-			$sql = "SELECT ".$this->_columns." FROM ".$this->_table." ".$this->_query." LIMIT " . $this->_start . ",".$number;
-		}
-		$Query = $this->query($sql);
-		$this->_results = $this->_query->fetchAll(PDO::FETCH_OBJ);
-		$this->clearQuery();
-		return $this->_results;
-	}
-	
-	public function update(array $data){
-		$update = array();
-		foreach($data as $column => $value){
-			$update[] = $column."='".$value."'";
-		}
-		$this->_results = $this->query("UPDATE ".$this->_table." SET ".implode(",", $update)." ".$this->_query);
-		$this->clearQuery();
-		return $this->_results;
-	}
-
-	public function delete() {
-		$this->_results = $this->query("DELETE FROM ".$this->_table." ".$this->_query);
-		$this->clearQuery();
-		return $this->_results;
-	}
-	
-	public function insert(array $data, $MultipleRows = false){
-		//Second paramter dictates if more than one row is being inserted
-		if($MultipleRows === false){
-			$WorkData = array($data);
-		} else {
-			$WorkData = $data;
-		}
-		$columns = array();
-		$values = array();
-		$row = 0;
-		$columnCount = 0;
-		
-		do {
-			$rowValues = array();
-			foreach($WorkData[$row] as $column => $value)
-			{
-				$columns[] = "`" . $column . "`";
-				$rowValues[] = "'" . $value . "'";
-			}
-			$columnCount = count($rowValues);
-			$values[] = "(" . implode(",", $rowValues) . ")";
-			$row++;
-		} while ($MultipleRows === true && $row < count($data));
-
-		$this->_results = $this->query("INSERT INTO " . $this->_table . " (" . implode(",", array_slice($columns, 0, $columnCount)) . ") VALUES " . implode(",", $values));
-		$this->clearQuery();
-		return $this->_results;
-	}
-
-	public function hasError(){
-		return $this->_error;
-	}
-	
-	public function insertGetId(array $data){
-		$this->insert($data);
-		return $this->_pdo->lastInsertId();
-	}
-	
 	public function where($column, $operator, $row = null) {
 		if(!$row){
 			$row = $operator;
@@ -196,19 +199,26 @@ class DB implements Countable, arrayaccess, Iterator {
 		}
 		return $this;
 	}
+
+//Get functions	
 	
-	public function getQuery() {
+	public function results(){
+		return $this->_results;
+	}
+
+	public function hasError(){
+		return $this->_error;
+	}
+
+//Query Managment 	
+	public function getQuery() { //Returns the current query
 		if($this->hasQuery()) {
 			return $this->_query;
 		}
 		return false;
 	}
-	
-	public function results(){
-		return $this->_results;
-	}
-	
-	private function hasQuery() {
+
+	private function hasQuery() { //Is a query set
 		if(isset($this->_query) and $this->_query != "")
 		{
 			return true;
@@ -217,11 +227,13 @@ class DB implements Countable, arrayaccess, Iterator {
 		}
 	}
 
-	private function clearQuery(){
+	private function clearQuery(){ //Set query to blank
 		$this->_query = "";
 	}
 
-	public function loadQuery($id=0){
+//Previous Queries Managment
+
+	public function loadQuery($id=0){//Load a previously stored query
 		if(isset(self::$_pastQueries[$id])){
 		 	$this->_query = self::$_pastQueries[$id]["Query"];
 			$this->_columns = self::$_pastQueries[$id]["Columns"];
@@ -232,14 +244,14 @@ class DB implements Countable, arrayaccess, Iterator {
 		return false;
 	}
 
-	public function setQuery(array $Query){
+	public function setQuery(array $Query){//Manually enter a query to be loaded
 		$this->_query   = $Query["Query"];
 		$this->_columns = $Query["Columns"];
 		$this->_start   = $Query["Start"];
 		$this->_table   = $Query["Table"];
 	}
 
-	public function tagQuery($name="", $value = null){
+	public function tagQuery($name="", $value = null){//Store the current query in its current state
 		if($value == null){
 			if($name != ""){
 				self::$_pastQueries[$name] = array(
@@ -248,6 +260,7 @@ class DB implements Countable, arrayaccess, Iterator {
 					"Start"		=> $this->_start,
 					"Table"		=> $this->_table
 				);
+				return $name;
 			} else {
 				self::$_pastQueries[] = array(
 					"Query" 	=> $this->_query,
@@ -255,15 +268,15 @@ class DB implements Countable, arrayaccess, Iterator {
 					"Start"		=> $this->_start,
 					"Table"		=> $this->_table
 				);
+				end(self::$_pastQueries);
+				return key(self::$_pastQueries);//Return index of last query stored
 			}
 		} else {
 			self::$_pastQueries[$name] = $value;
 		}
 	}
 
-	public function dumpPrevious(){
-		return self::$_pastQueries;
-	}
+//Array Access interface
 
     public function offsetSet($offset, $value) {
 	    if (is_null($offset)) {
@@ -284,6 +297,8 @@ class DB implements Countable, arrayaccess, Iterator {
     public function offsetGet($offset) {
     	return $this->skip($offset - 1)->get(1);
     }
+
+//Array Iterator interface
 
     public function rewind() {
         $this->_position = 0;

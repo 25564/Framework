@@ -2,7 +2,7 @@
 //Comma Seperated Values
 class CSV {
 
-	public static function parseCSV($filename, $delimiter=','){
+	public static function parseFile($filename, $delimiter=','){
 	    if(!file_exists($filename) || !is_readable($filename)){
 	        return false;
 	    } else {

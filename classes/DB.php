@@ -71,7 +71,7 @@ class DB implements Countable, arrayaccess, Iterator {
 		$this->query("SELECT ".$this->_columns." FROM ".$this->_table." ".$this->_query);
 		$this->_results = $this->_query->rowCount();
 		$this->clearQuery();
-		return $this->_results;
+		return $this->results();
 	}
 	
 	public function get($number = null) {//Select row data
@@ -116,7 +116,7 @@ class DB implements Countable, arrayaccess, Iterator {
 		
 		do {
 			$rowValues = array();
-			foreach($WorkData[$row] as $column => $value)
+			foreach((array)$WorkData[$row] as $column => $value)
 			{
 				$columns[] = "`" . $column . "`";
 				$rowValues[] = "'" . $value . "'";

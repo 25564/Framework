@@ -47,7 +47,7 @@ class User implements Observable {
 		if(isset($fields['username']) && !$this->exists($fields['username'])){
 			$this->notify();
 			if(!$this->_blocked){
-				if(!$this->_db->insert('user', $fields)){
+				if(!$this->_db->table("user")->insert($fields)){
 					throw new Exception('There was a problem creating the account.');
 				} else {
 					return true;	

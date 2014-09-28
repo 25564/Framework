@@ -1,10 +1,13 @@
 <?php 
-class User{
+class User implements Observable {
 	private $_db, 
 			$_data, 
 			$_sessionName,
 			$_cookieName,
 			$_isLoggedIn = false,
+			$_observers = array(),
+			$_blocked = false, //Block creation and authentication
+			$_error = "Password or Username is incorrect",
 			$_UserID;
 
 	public function __construct($user = null){
@@ -42,10 +45,13 @@ class User{
 		//Creates new user in DB
 		$Exists = $this->find($fields['username'], true);
 		if(isset($fields['username']) && !$this->exists($fields['username'])){
-			if(!$this->_db->insert('user', $fields)){
-				throw new Exception('There was a problem creating the account.');
-			} else {
-				return true;	
+			$this->notify();
+			if(!$this->_blocked){
+				if(!$this->_db->insert('user', $fields)){
+					throw new Exception('There was a problem creating the account.');
+				} else {
+					return true;	
+				}
 			}
 		}
 	}
@@ -96,30 +102,55 @@ class User{
 			} else {
 				if($username){
 					if($this->data()->password === Hash::make($password, $this->data()->salt)){ //Check password submitted
-						Session::put($this->_sessionName, $this->data()->user_id); //Creates session
-						if($remember == 'on'){ //If they want to be remembered
-							$hashCheck = $this->_db->table("user_sessions")->where('user_id', $this->data()->user_id)->get(); //Check for existing session
-							if(count($hashCheck) == 0){ //If there is not an existing hash
-								$hash = Hash::unique();
+						$this->notify();
+						if(!$this->_blocked){
+							Session::put($this->_sessionName, $this->data()->user_id); //Creates session
+							if($remember == 'on'){ //If they want to be remembered
+								$hashCheck = $this->_db->table("user_sessions")->where('user_id', $this->data()->user_id)->get(); //Check for existing session
+								if(count($hashCheck) == 0){ //If there is not an existing hash
+									$hash = Hash::unique();
+									
+									$this->_db->table('user_sessions')->insert(array(
+										'user_id' => $this->data()->user_id,
+										'hash' => $hash
+									));
+								} else { //use existing hash if found
+									$hash = $hashCheck[0]->hash;	
+								}
 								
-								$this->_db->table('user_sessions')->insert(array(
-									'user_id' => $this->data()->user_id,
-									'hash' => $hash
-								));
-							} else { //use existing hash if found
-								$hash = $hashCheck[0]->hash;	
+								$Cookie = Cookie::put($this->_cookieName, $hash, Config::get("remember/cookie_expiry")); //Set cookie
 							}
-							
-							$Cookie = Cookie::put($this->_cookieName, $hash, Config::get("remember/cookie_expiry")); //Set cookie
+							return true;
 						}
-						return true;
 					}
 				}
 			}
 		}
 		return false;
 	}
-	
+
+	public function attachObserver(Observer $object) {
+		$this->_observers[] = $object;
+	}
+
+	public function detachObserver(Observer $object){
+		foreach ($this->_observers as $index => $observer) {
+			if ($object == $observer) {
+				unset($this->_observers[$index]);
+			}
+		}
+	}
+
+	public function notify() {
+		foreach ($this->_observers as $observer) {
+			$observer->update($this);
+		}
+	}
+
+	public function block($type = true){
+		$this->_blocked = $type;
+	}
+
 	public function data() {
 		return $this->_data; //Abstract get function
 	}
@@ -134,5 +165,13 @@ class User{
 	public function isLoggedIn() {
 		return $this->_isLoggedIn; //Abstract get function	
 	}	
+
+	public function error() {
+		return $this->_error;
+	}
+
+	public function setError($error){
+		$this->_error = $error;
+	}
 }
 ?>

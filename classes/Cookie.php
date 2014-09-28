@@ -10,7 +10,7 @@ class Cookie {
 		return $_COOKIE[$name];
 	}
 	
-	public function put($name, $value, $expiry){
+	public static function put($name, $value, $expiry){
 		//Creates a cookie
 		if(setcookie($name, $value, time() + $expiry, '/'))	{
 			return true;	

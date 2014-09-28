@@ -1,6 +1,8 @@
 <?php 
 //Framework began at 1303 lines
 
+ob_start();
+
 if(session_id() == '') { //Just incase a session is already set
     session_start(); //Set session if not set already
 }

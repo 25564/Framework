@@ -1,11 +1,12 @@
 <?php
-class BlogPost {
+class BlogPost implements Iterator{
 	private $_db,
-			$_data,
+			$_data = false,
 			$_user = null,
-			$_exists = false,
 			$_page = 1,
+			$_position = 0,
 			$_postLimit = 7;
+	public $error404 = false;
 				
 	public function __construct($BlogPost = null){
 		$this->_db = DB::getInstance();	//Set local variable to the DB for convience 	
@@ -63,20 +64,21 @@ class BlogPost {
 			$Type = array_keys($identifier);
 			switch(strtolower($Type[0])){
 				case 'id':
-					return $this->_db->table('blog_posts')->skip(($this->getPage()-1)*$this->_postLimit)->where('id', $identifier[$Type[0]])->orderBy('id', 'DESC')->get($this->_postLimit);
+					$this->_data = $this->_db->table('blog_posts')->skip(($this->getPage()-1)*$this->_postLimit)->where('id', $identifier[$Type[0]])->orderBy('id', 'DESC')->get($this->_postLimit);
 				break;
 				case 'author':
-					return $this->_db->table('blog_posts')->skip(($this->getPage()-1)*$this->_postLimit)->where('author', $identifier[$Type[0]])->orderBy('id', 'DESC')->get($this->_postLimit);
+					$this->_data = $this->_db->table('blog_posts')->skip(($this->getPage()-1)*$this->_postLimit)->where('author', $identifier[$Type[0]])->orderBy('id', 'DESC')->get($this->_postLimit);
 				break;
 				case 'tag':
-				    return $this->_db->raw("SELECT blog_posts.* FROM blog_tags LEFT JOIN (blog_posts) ON (blog_tags.id = blog_posts.id) WHERE blog_tags.tag =? ORDER BY blog_posts.id DESC  LIMIT ".($this->getPage()-1)*$this->_postLimit."," . $this->_postLimit, array($identifier[$Type[0]]));
+				    $this->_data = $this->_db->raw("SELECT blog_posts.* FROM blog_tags LEFT JOIN (blog_posts) ON (blog_tags.id = blog_posts.id) WHERE blog_tags.tag = LOWER(?) ORDER BY blog_posts.id DESC  LIMIT ".($this->getPage()-1)*$this->_postLimit."," . $this->_postLimit, array($identifier[$Type[0]]));
 				break;
 				case 'normal':
-					return $this->_db->table('blog_posts')->skip(($this->getPage()-1)*$this->_postLimit)->where('visible', 0)->orderBy('id', 'DESC')->get($this->_postLimit);
+					$this->_data = $this->_db->table('blog_posts')->skip(($this->getPage()-1)*$this->_postLimit)->where('visible', 0)->orderBy('id', 'DESC')->get($this->_postLimit);
 				break;
 			}
 		}
-		return false;
+		$this->error404 = (!$this->data()) ? true : false;
+		return $this->data();
 	}
 	
 	public function getTags(){
@@ -127,7 +129,7 @@ class BlogPost {
 	
 	public function exists(){
 		//Basic get function returns a bool does the report exist
-		return $this->_exists;
+		return (!$this->data()) ? false : true;
 	}
 	
 	public function data(){
@@ -144,5 +146,29 @@ class BlogPost {
 		//Return current page - Default: 1
 		return $this->_page;
 	}
+
+
+    public function rewind() {
+        $this->_position = 0;
+        if(!$this->data()){
+	        $this->_data = $this->get();
+    	}
+    }
+
+    public function current() {
+        return $this->_data[$this->_position];
+    }
+
+    public function key() {
+        return $this->_position;
+    }
+
+    public function next() {
+        ++$this->_position;
+    }
+
+    public function valid() {
+        return isset($this->_data[$this->_position]);
+    }
 }
 ?>

@@ -23,6 +23,12 @@ Meta Methods are defined with __ before the name and watchers are defined by __#
 		- Run when a element is unset
 	-Dump
 		- Ran when Table->Dump() is run. Dump() is for bebugging the table or in 4.6 and further when var_dump() is called on the table 
+	-Change
+		- Ran every time a value is changed, set or unset
+		- Occurs after value is changed and passes two oaraneters offset (The offset changed) and the new value
+
+	-Save
+		- Occurs when the save function is ran. This overides the default function meta method is returned further.
 
 #Current Watchers
 	- Change
@@ -60,6 +66,12 @@ Meta Methods are defined with __ before the name and watchers are defined by __#
 		- Allows for raw import of the table in the format of 3 sub arrays inside a wrapper array.
 	- save
 		- Saves the current table in the format that can be loaded by the load function
+		- If the Meta method is present it will be overriden
+
+#Extra Notes
+	- Unsetting a Data value deletes all watchers attached to that element
+	- Change is called after the change occurs so it will not be called if the action is blocked by a watcher
+	- Save method could cause incosistancies with loading data.
 */
 class MetaTable implements Countable, arrayaccess, Iterator {
 	private $_MetaMethods,
@@ -84,15 +96,19 @@ class MetaTable implements Countable, arrayaccess, Iterator {
 	}
 
 	public function save(){
-		$MetaMethods = array();
-		foreach($this->_MetaMethods as $Method => $value){
-			$MetaMethods["__" . $Method] = $value;
+		if($this->hasMeta("save")){
+			return $this->callMeta("save");
+		} else {
+			$MetaMethods = array();
+			foreach($this->_MetaMethods as $Method => $value){
+				$MetaMethods["__" . $Method] = $value;
+			}
+			return array(
+				'MetaMethods' => $MetaMethods,
+				'Data' => $this->_Data,
+				'Watchers' => $this->_Watchers
+			);
 		}
-		return array(
-			'MetaMethods' => $MetaMethods,
-			'Data' => $this->_Data,
-			'Watchers' => $this->_Watchers
-		);
 	}
 
 //Helpers
@@ -180,7 +196,6 @@ class MetaTable implements Countable, arrayaccess, Iterator {
 	    	$Proceed = $this->callWatcher($offset, "change", array($value));
 	    }
 	    if($Proceed){
-
 		    if (is_null($offset)) {
 		    	if($this->hasMeta("newindex")){
 					return $this->callMeta("newindex", array($offset));
@@ -194,6 +209,9 @@ class MetaTable implements Countable, arrayaccess, Iterator {
 		        	$this->_Data[$offset] = $value;
 		    	}
 		    }
+		    if($this->hasMeta("change")){
+				return $this->callMeta("change", array($offset, $this->_Data[$offset]));
+			}
 		}
     }
 
@@ -202,20 +220,33 @@ class MetaTable implements Countable, arrayaccess, Iterator {
     }
 
     public function offsetUnset($offset) {
-    	$Proceed = true;
- 	    if($this->hasWatcher($offset, "unset")){
-	    	$Proceed = $this->callWatcher($offset, "unset");
-	    } elseif($this->hasWatcher($offset, "change")){
-		    $Proceed = $this->callWatcher($offset, "change", array(null));
-	    }
+    	if(!$this->isMetaMethod($offset)){
+	    	$Proceed = true;
+	 	    if($this->hasWatcher($offset, "unset")){
+		    	$Proceed = $this->callWatcher($offset, "unset");
+		    } elseif($this->hasWatcher($offset, "change")){
+			    $Proceed = $this->callWatcher($offset, "change", array(null));
+		    }
 
-	    if($Proceed){
-	    	if($this->hasMeta("unset")){
-				return $this->callMeta("unset", array($offset));
+		    if($Proceed){
+		    	if($this->hasMeta("unset")){
+					return $this->callMeta("unset", array($offset));
+				} else {
+		        	unset($this->_Data[$offset]);
+		        	unset($this->_Watchers[$offset]);
+		    	}
+		    }
+
+		    if($this->hasMeta("change")){
+				return $this->callMeta("change", array($offset, null));
+			}
+		} else {
+			if($this->isWatcher($offset)){
+				unset($this->_Watchers[$offset]);
 			} else {
-	        	unset($this->_Data[$offset]);
-	    	}
-	    }
+				unset($this->_MetaMethods[$offset]);
+			}
+		}
     }
 
     public function offsetGet($offset) {
@@ -270,11 +301,15 @@ class MetaTable implements Countable, arrayaccess, Iterator {
 	}
 
 	public function __debugInfo() {
-        return [
-            'MetaMethods' => $this->_MetaMethods,
-            'Data' => $this->_Data,
-            'Watchers' => $this->_Watchers
-        ];
+		if($this->hasMeta("dump")){
+			return $this->callMeta("dump");
+		} else {
+	        return [
+	            'MetaMethods' => $this->_MetaMethods,
+	            'Data' => $this->_Data,
+	            'Watchers' => $this->_Watchers
+	        ];
+    	}
     }
 
 /////////////////////////////////////

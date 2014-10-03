@@ -6,7 +6,8 @@ class BlogPost implements Iterator{
 			$_page = 1,
 			$_position = 0,
 			$_postLimit = 7;
-	public $error404 = false;
+	public  $error404 = false,
+			$singlePost = false;
 				
 	public function __construct($BlogPost = null){
 		$this->_db = DB::getInstance();	//Set local variable to the DB for convience 	
@@ -78,6 +79,7 @@ class BlogPost implements Iterator{
 			}
 		}
 		$this->error404 = (!$this->data()) ? true : false;
+		$this->singlePost = (count($this->data()) == 1) ? true : false;
 		return $this->data();
 	}
 	

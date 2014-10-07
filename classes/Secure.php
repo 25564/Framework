@@ -12,21 +12,21 @@ class Secure {
 		return htmlentities($string, ENT_QUOTES, 'UTF-8');
 	}
 
-	public static function user_Encrypt($string){
+	public static function user_Encrypt($string){//Use user specific key
 		if($key = self::SecureUserReady()){
 			return self::encrypt($string, $key);
 		}
 		return false;
 	}
 
-	public static function user_Decrypt($string){
+	public static function user_Decrypt($string){//Use user specific key
 		if($key = self::SecureUserReady()){
 			return self::decrypt($string, $key);
 		}
 		return false;
 	}
 
-	private static function SecureUserReady(){ //Can the 
+	private static function SecureUserReady(){ //User must of logged in using their password this session for security reasons
 		if(Session::exists("__user")){
 			return Session::get("__user");
 		}

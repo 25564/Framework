@@ -19,12 +19,14 @@ if(Input::exists()){
 		));
 		if($validater->passed()){
 			$user = new User();
+			$user->attachObserver(new Observer_GroupType);
+			$user->attachObserver(new Observer_SecureKey);
 			$authenticated = $user->login(Input::get("username"), Input::get("password"), Input::get("remember"));
 			if($authenticated){
 				Session::flash('homeMessage', 'You were logged in successfully.');
 				Redirect::to("home");
 			} else {
-				$errors = array('Password or Username is incorrect');	
+				$errors = array($user->error());	
 			}
 		} else {
 			$errors = $validater->errors();	

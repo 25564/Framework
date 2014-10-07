@@ -157,7 +157,8 @@ class User implements Observable {
 	
 	public function logout(){
 		//Destroys Session, Cookie and removes session from DB
-		Session::delete($this->_sessionName);	
+		Session::delete($this->_sessionName);
+		Session::delete("__user");	
 		Cookie::delete($this->_cookieName);
 		$this->_db->table('user_session')->where("user_id", $this->data()->user_id)->delete();
 	}

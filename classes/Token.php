@@ -1,5 +1,6 @@
 <?php 
 class Token {
+	//Extremly useful for cross site security and useful for securing forms
 	
 	public static function generate() {
 		//Generates the code which is unique every time the page is loaded

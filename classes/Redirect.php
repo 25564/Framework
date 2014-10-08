@@ -16,7 +16,7 @@ class Redirect {
 			header('Location: ' . $location);
 			exit();
 		} else {
-			header('Location: http://' . $_SERVER['HTTP_HOST']);
+			header('Location: http://' . $_SERVER['HTTP_HOST'] . Config::get("root"));
 			exit();	
 		}
 	}

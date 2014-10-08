@@ -1,6 +1,6 @@
 <?php
 class Report {
-	//Originally for a feedback
+	//Originally for an infinate scroll review system
 
 	private $_db,
 			$_data,

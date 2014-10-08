@@ -42,7 +42,7 @@ class Template
 	public function universalTags(){
 		//Placeholders that are always set
 		$this->set('DATE', date("d-m-Y"));
-		$this->set('HTTP_HOST', $_SERVER['HTTP_HOST']);
+		$this->set('HTTP_HOST', $_SERVER['HTTP_HOST'] . Config::get("root"));
 	}
 	
 	public function parse(){ //Exports and returns the modified template

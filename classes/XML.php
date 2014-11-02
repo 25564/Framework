@@ -19,7 +19,7 @@ class XML implements ArrayAccess {
 		$this->subParse($this->_data, $this->_xml);
 	}
 
-	function subParse($info, &$xml) {
+	private function subParse($info, &$xml) {
 	    foreach($info as $key => $value) {
 	        if(is_array($value)) {
 	            $key = is_numeric($key) ? $this->_numKey : $key;

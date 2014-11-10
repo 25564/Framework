@@ -10,7 +10,7 @@ class XML implements ArrayAccess {
  		$this->_numKey = $NumericKey;
  	}
 
-	public function print(){
+	public function export(){
 		header('Content-Type: text/xml');
 		print $this->_xml->asXML();
 	}

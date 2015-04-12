@@ -1,123 +1,96 @@
 <?php
 class Validate {
-	private $_passed = false, 
-			$_errors = array(),
-			$_db = null;	
-	
-	public function __construct() {
-		$this->_db = DB::getInstance(); //Initiates the DB	
-	}
-	
-	public function check($source, $items = array()) {
-		//Form checking function
-		//This function can be called by 
-		/*
-		$validater = new Validate();
-		if(Input::exists()){
-			$valid = $validater->check('$_POST', array(
-				'username' => array(
-					'required' => true, //Is required
-					'min' 	   => 2,	//Minium length
-					'max' 	   => 40	//Maximum Length
-				),
-				'password' => array(
-					'required' => true,
-					'min' 	   => 6,
-					'differ'   => 'username' //Cannot be the same as username
-				),
-				'email' => array(
-					'required' => true,
-					'email'    => true		//Must be a valid email
-				),
-				'password2' => array(
-					'required' => true,
-					'matches'  => 'password'//Must have the same value as password
-				)
-			));
-			if($valid->passed()){
-				//Register
-			} else {
-				var_dump($valid->errors);
-			}
-		}
-		//This simple registration form validator is a prime example of how this class can be used
-		*/
-		foreach($items as $item => $rules){
-			foreach($rules as $rule => $rule_value){
-				
-				$value = trim($source[$item]);
-				if($rule === 'required' && empty($value) && $rule_value == true){
-					$this->addError("{$item} is required");
-				} elseif(!empty($value) && !empty($value)){
-					switch($rule){
-						case 'min': //Minimum Length - INT
-							if(strlen($value) < $rule_value){
-								$this->addError("{$item} must be a minium of {$rule_value} characters");
-							}
-						break;
-						case 'numeric': //Only a number - BOOL
-							if($rule === 'numeric' && !is_numeric($value) && $rule_value == true){
-								$this->addError("{$item} must be a number");
-							}
-						break;
-						case 'email':  //Is valid email - BOOL
-							if($rule_value == true && !filter_var($value, FILTER_VALIDATE_EMAIL)){
-								$this->addError("{$item} is not a valid email");
-							}
-						break;
-						case 'max': //Maximum Length - INT
-							if(strlen($value) > $rule_value){
-								$this->addError("{$item} has a maximum of {$rule_value} characters");
-							}
-						break;
-						case 'matches':  //Equal to other input - STRING
-							if($value != $source[$rule_value]){
-								$this->addError("{$item} does not match {$rule_value}");
-							}
-						break;
-						case 'differ':  //Different to other input - STRING
-							if($value == $source[$rule_value]){
-								$this->addError("{$item} is the same as {$rule_value}");
-							}
-						break;
-						case 'unique':   //Form name must be equal to Table Column - Table Name - STRING 
-							$check = $this->_db->table($rule_value)->where('LOWER(' . $item . ')', strtolower($value))->count();
-							if($check > 0){
-								$this->addError("{$item} already exists");
-							}
-						break;
-						case 'exists':   //Form name must be equal to Table Column - Table Name - STRING
-							$check = $this->_db->table($rule_value)->where('LOWER(' . $item . ')', strtolower($value))->count();
-							if($check == 0){
-								$this->addError("{$item} does not exist");
-							}
-						break;
+	public $Errors = array();
+	public $Data;
+	private $StandardRules = array(
+		"required", "min", "max", "unique", "exists", "matches", "differs"
+	);
+	public function Validate($Data, $Rules){
+		$this->Data = $Data;
+		foreach($Rules as $InputKey => $KeyRules){
+			foreach($KeyRules as $RuleName => $RuleValue){
+				$CustomError = false;
+				if(is_array($RuleValue)){
+					if(isset($RuleValue["CustomError"])){
+						$CustomError = $RuleValue["CustomError"];
 					}
 				}
-				
+				$this->executeRule($InputKey, $RuleName, $RuleValue, $CustomError);
 			}
 		}
-		
-		if(empty($this->_errors)){
-			$this->_passed = true;
+		if(empty($this->Errors)){
+			return true;	
+		}
+		return $this->Errors;
+	}
+	private function executeRule($valueName, $RuleName, $ruleSettings, $customerror = false){
+		if(in_array($RuleName, $this->StandardRules)){
+			$Settings = array();
+			if(!is_array($ruleSettings)){
+				$Settings = array("Value" => $ruleSettings);
+			} else {
+				$Settings = $ruleSettings;
+			}
+			$FunctionName = "_".strtolower($RuleName);
+			$Return = $this->$FunctionName($this->Data[$valueName], $Settings);
+			if($Return !== true){
+				if(!$customerror){
+					$this->throwError($Return);
+				} else {
+					$this->ThrowCustomError($customerror, $this->Data[$valueName]);
+				}
+			}
+		} else {
+			$this->throwError("Unkown Rule '{$RuleName}'");
+		}
+	}
+	private function ThrowCustomError($Message, $Value){
+		$Message = str_replace("{Value}", $Value, $Message);
+		$this->throwError($Message);
+	}
+	private function throwError($string){
+		array_push($this->Errors, escape($string));
+	}
+	/*************************************
+				Standard Rules
+	*************************************/
+	private function _min($Value, $Settings){
+		if(strlen($Value) >= $Settings["Value"]){
 			return true;
 		}
-		return false;
+		return "Value must be at least " . $Settings["Value"] . " characters long";
 	}
-
-	public function errors() {
-		//Get Method returns array of errors
-		return $this->_errors;	
+	private function _max($Value, $Settings){
+		if(strlen($Value) <= $Settings["Value"]){
+			return true;
+		}
+		return "Value can't be over " . $Settings["Value"] . " characters long";
 	}
-	
-	public function passed(){
-		//returns bool if passed
-		return $this->_passed;	
+	private function _required($Value, $Settings){
+		if(empty($Value) && $Settings["Value"] == true){
+			return "Value is required";
+		}	
+		return true;
 	}
-	
-	private function addError($error) {
-		//private helper function. Adds an error to the error array
-		$this->_errors[] = $error;	
+	private function _unique($Value, $Settings){
+		$exists = \BluePrint::DB($Settings["Table"])->exists($Settings["Column"], $Value);
+		if(!$exists){
+			return true;
+		}
+		return "'{$Value}' already exists in table `{$Settings['Table']}`";
+	}
+	private function _exists($Value, $Settings){
+		$exists = \BluePrint::DB($Settings["Table"])->exists($Settings["Column"], $Value);
+		if($exists){
+			return true;
+		}
+		return "'{$Value}' does not exist in table `{$Settings['Table']}`";
+	}
+	private function _matches($Value, $Settings){
+		if($Value == $this->Data[$Settings['Value']]){
+			return true;
+		}	
+		return "{$Value} does not match {$Settings['Value']}";
 	}
 }
 ?>

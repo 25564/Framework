@@ -1,5 +1,5 @@
 <?php
-require_once $_SERVER['DOCUMENT_ROOT']  . "/core/init.php"; //Initialize
+require_once "/core/init.php"; //Initialize
 
 $user = new User();
 $user->logout();

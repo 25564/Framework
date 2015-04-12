@@ -1,5 +1,5 @@
 <?php 
-require_once $_SERVER['DOCUMENT_ROOT']  . "/includes/header.php"; //Initialize
+require_once "/includes/header.php"; //Initialize
 
 if(Input::exists()){
 	$validater = new Validate();
@@ -67,5 +67,5 @@ if(Input::exists()){
     <input type="submit">
 </form>
 <?php 
-require_once $_SERVER['DOCUMENT_ROOT']  . "/includes/footer.php"; //Initialize
+require_once "/includes/footer.php"; //Initialize
 ?>

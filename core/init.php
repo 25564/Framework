@@ -12,7 +12,7 @@ $GLOBALS['config'] = array( //Config
 		'host' => 'localhost',
 		'username' => 'root',
 		'password' => '',
-		'db' => 'Dev-Manage',
+		'db' => 'framework',
 	),
 	'remember' => array(
 		'cookie_name' => 'hash',
@@ -22,15 +22,15 @@ $GLOBALS['config'] = array( //Config
 		'session_name' => 'user',
 		'token_name' => 'token'
 	),
-	'root' => '/Dev-Manage'
+	'root' => '/Framework'
 );
 
 spl_autoload_register(function($class) { //Auto load classes as they are needed
-	if(substr($class, 0 , 9) == "Observer_"){
-		require_once $_SERVER['DOCUMENT_ROOT'] . $GLOBALS['config']['root'] . '/classes/Observers/' . substr($class, 9) . '.php';
-	} else{
-		require_once $_SERVER['DOCUMENT_ROOT'] . $GLOBALS['config']['root'] . '/classes/' . $class . '.php';	
-	}
+	$file = $_SERVER['DOCUMENT_ROOT'] . $GLOBALS['config']['root'] . '/classes/' . str_replace(array('\\', '_'), '/', $class).'.php';
+    if (file_exists($file)) {
+        require_once $file;
+        return;
+    }
 });
 
 //Start functions require

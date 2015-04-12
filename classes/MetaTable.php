@@ -11,7 +11,7 @@ Count     - When count() is ran. This will exclude MetaMethods when counting ele
 class MetaTable implements arrayaccess, Countable, IteratorAggregate {
 	public $_data = array();
 	private $_Config = array(
-		"MetaPrefix" => "__"
+		"MetaPrefix" => "__" //Changing may cause compatibility issues
 	);
 
 	public function __construct(array $Data = array()) {

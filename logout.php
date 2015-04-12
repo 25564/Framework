@@ -1,8 +1,11 @@
 <?php
 require_once "/core/init.php"; //Initialize
 
-$user = new User();
-$user->logout();
-Session::flash('homeMessage', 'You were logged out successfully.');
+if(Session::exists("UserID")){
+	Cookie::delete(Config::get("remember/cookie_name"));
+	DB::getInstance()->table("Users")->where("user_id", Session::get("UserID"));
+	Session::delete("UserID");
+	Session::flash('homeMessage', 'You were logged out successfully.');
+}
 Redirect::to("home");
 ?>

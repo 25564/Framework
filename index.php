@@ -4,21 +4,20 @@ if(Session::exists("homeMessage")){
 	echo Session::flash('homeMessage');
 }
 
-//echo "<b>Current State:</b></br><pre>", var_dump($Data->_data), "</pre><br>";
+$User = false;
 
-/*$Data["__Modify"] = function($self, $Params){
-	$StringPos = strpos($Params["Offset"], "#");
-	if($StringPos === 0) {} else { //It is easier this way.
-		$self->_data[$Params["Offset"]] = $Params["Value"];
+try {
+	if(Session::exists(Config::get("session/session_name"))){
+    	$User = new User(Session::get(Config::get("session/session_name")));
 	}
-	return $self->_data;
-};*/
+} catch (Exception $e) {
+    echo 'Caught exception: ',  $e->getMessage(), "\n";
+    $User = false;
+}
 
-$User = new User(1);
-
-$User->Data->Account->Points = 6;
-
-echo "<pre>", var_dump($User->Data->Account), "</pre>";
-
+if($User !== false){
+	echo $User->Data->Account->Points; //Will automagically load Account since not currently present
+	echo "<br><br><br><pre>", var_dump($User), "</pre>";
+}
 require_once "/includes/footer.php"; //Initialize
 ?>

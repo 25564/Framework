@@ -30,6 +30,7 @@ class Validation {
 				$Settings = array("Value" => $ruleSettings, "ValueName" => $valueName);
 			} else {
 				$Settings = $ruleSettings;
+				$Settings["ValueName"] = $valueName;
 			}
 			$FunctionName = "_".strtolower($RuleName);
 			$Return = $this->$FunctionName($this->Data[$valueName], $Settings);
@@ -58,17 +59,17 @@ class Validation {
 		if(strlen($Value) >= $Settings["Value"]){
 			return true;
 		}
-		return "Value must be at least " . $Settings["Value"] . " characters long";
+		return $Settings["ValueName"] . " must be at least " . $Settings["Value"] . " characters long";
 	}
 	private function _max($Value, $Settings){
 		if(strlen($Value) <= $Settings["Value"]){
 			return true;
 		}
-		return "Value can't be over " . $Settings["Value"] . " characters long";
+		return $Settings["ValueName"] . " can't be over " . $Settings["Value"] . " characters long";
 	}
 	private function _required($Value, $Settings){
 		if(empty($Value) && $Settings["Value"] == true){
-			return "Value is required";
+			return $Settings["ValueName"] . " is required";
 		}	
 		return true;
 	}
@@ -81,7 +82,7 @@ class Validation {
 	}
 	private function _exists($Value, $Settings){
 		$exists = DB::getInstance()->table($Settings["Value"])->exists($Settings["ValueName"], $Value);
-		if($exists){
+		if($exists === true){
 			return true;
 		}
 		return "'{$Value}' does not exist in table `{$Settings['Value']}`";

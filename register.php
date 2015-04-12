@@ -24,7 +24,7 @@ if(Input::exists()){
 		if($valid === true){
 			//Register the User
 			$salt = Hash::salt();
-			$hashed = Hash::make(Input::get("password"), $salt);
+			$hashed = Hash::make(Input::get("Password"), $salt);
 			$user = new User();
 			try {
 				$newUser = $user->Create(array(
@@ -33,9 +33,9 @@ if(Input::exists()){
 					'Salt' 	   => $salt,
 				));
 				if($newUser == true){
-					Session::put("UserID", $user->Data->UserID);
+					Session::put(Config::get("session/session_name"), $user->Data->UserID);
 					Session::flash('homeMessage', 'You were registered successfully.');
-					//Redirect::to("home");
+					Redirect::to("home");
 				}
 			} catch (Exception $e) {
 				$errors = array($e->getMessage());

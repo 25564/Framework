@@ -19,7 +19,7 @@ $GLOBALS['config'] = array( //Config
 		'cookie_expiry' => '604800' //Seconds
 	),
 	'session' => array(
-		'session_name' => 'user',
+		'session_name' => 'UserID',
 		'token_name' => 'token'
 	),
 	'root' => '/Framework'

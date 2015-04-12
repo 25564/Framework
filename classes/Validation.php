@@ -1,5 +1,5 @@
 <?php
-class Validate {
+class Validation {
 	public $Errors = array();
 	public $Data;
 	private $StandardRules = array(
@@ -27,7 +27,7 @@ class Validate {
 		if(in_array($RuleName, $this->StandardRules)){
 			$Settings = array();
 			if(!is_array($ruleSettings)){
-				$Settings = array("Value" => $ruleSettings);
+				$Settings = array("Value" => $ruleSettings, "ValueName" => $valueName);
 			} else {
 				$Settings = $ruleSettings;
 			}
@@ -73,24 +73,31 @@ class Validate {
 		return true;
 	}
 	private function _unique($Value, $Settings){
-		$exists = \BluePrint::DB($Settings["Table"])->exists($Settings["Column"], $Value);
+		$exists = DB::getInstance()->table($Settings["Value"])->exists($Settings["ValueName"], $Value);
 		if(!$exists){
 			return true;
 		}
-		return "'{$Value}' already exists in table `{$Settings['Table']}`";
+		return "'{$Value}' already exists in table `{$Settings['Value']}`";
 	}
 	private function _exists($Value, $Settings){
-		$exists = \BluePrint::DB($Settings["Table"])->exists($Settings["Column"], $Value);
+		$exists = DB::getInstance()->table($Settings["Value"])->exists($Settings["ValueName"], $Value);
 		if($exists){
 			return true;
 		}
-		return "'{$Value}' does not exist in table `{$Settings['Table']}`";
+		return "'{$Value}' does not exist in table `{$Settings['Value']}`";
 	}
 	private function _matches($Value, $Settings){
 		if($Value == $this->Data[$Settings['Value']]){
 			return true;
 		}	
 		return "{$Value} does not match {$Settings['Value']}";
+	}
+
+	private function _differs($Value, $Settings){
+		if($Value != $this->Data[$Settings['Value']]){
+			return true;
+		}	
+		return "{$Value} matches {$Settings['Value']}";
 	}
 }
 ?>

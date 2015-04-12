@@ -17,6 +17,7 @@ class DB implements Countable, arrayaccess, Iterator {
 			$_table = null, //Table query acts upon
 			$_position = 0, //Current Array iterator increment
 			$_Array = false;
+
 	private function __construct() {
 		try { //Try DB Connection with Config settings
 			$this->_pdo = new PDO('mysql:host='.Config::get('mysql/host').';dbname='.Config::get('mysql/db').'', Config::get('mysql/username'), Config::get('mysql/password'));
@@ -150,6 +151,13 @@ class DB implements Countable, arrayaccess, Iterator {
 		return $this->_pdo->lastInsertId();
 	}
 	
+	public function exists($key = false, $operator = false, $value = false){
+		if($key != false && $operator != false){
+			$this->where($key, $operator, $value);
+		}
+		$result = $this->count();
+		return ($result > 0) ? true : false;
+	}
 //Query Builder functions
 
 	public function table($table) {//Set the table that is being acted upon

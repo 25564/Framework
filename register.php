@@ -1,43 +1,39 @@
 <?php 
-require_once $_SERVER['DOCUMENT_ROOT']  . "/includes/header.php"; //Initialize
+require_once "/includes/header.php"; //Initialize
 
 if(Input::exists()){
-	$validater = new Validate();
+	$validater = new Validation();
 	if(Token::check(Input::get("token"))){
-		$valid = $validater->check($_POST, array(
-			'username' => array(
+		$valid = $validater->Validate($_POST, array(
+			'Username' => array(
 				'required' => true, //Is required
 				'min' 	   => 3,	//Minium length
 				'max' 	   => 35,	//Maximum Length
-				'unique'   => 'user'//Must be only one in DB
+				'unique'   => 'Users'//Must be only one in DB
 			),
-			'password' => array(
+			'Password' => array(
 				'required' => true,
 				'min' 	   => 5,
-				'differ'   => 'username' //Cannot be the same as username
+				'differs'   => 'Username' //Cannot be the same as username
 			),
-			'email' => array(
-				'required' => false,	//This may have to change but I am concerned people will be scared off by having to give such personal info
-				'email'    => true		//Must be a valid email
-			),
-			'password2' => array(
+			'Password2' => array(
 				'required' => true,
-				'matches'  => 'password'//Must have the same value as password
+				'matches'  => 'Password'//Must have the same value as password
 			)
 		));
-		if($validater->passed()){
+		if($valid === true){
 			//Register the User
 			$salt = Hash::salt();
-			$hashed = Hash::make(Input::get("password"), $salt);
+			$hashed = Hash::make(Input::get("Password"), $salt);
 			$user = new User();
 			try {
-				$newUser = $user->create(array(
-					'username' => escape(Input::get("username")),
-					'password' => $hashed,
-					'salt' 	   => $salt,
-					'email'	   => escape(Input::get("email"))
+				$newUser = $user->Create(array(
+					'Username' => escape(Input::get("Username")),
+					'Password' => $hashed,
+					'Salt' 	   => $salt,
 				));
 				if($newUser == true){
+					Session::put(Config::get("session/session_name"), $user->Data->UserID);
 					Session::flash('homeMessage', 'You were registered successfully.');
 					Redirect::to("home");
 				}
@@ -45,11 +41,13 @@ if(Input::exists()){
 				$errors = array($e->getMessage());
 			}
 		} else {
-			$errors = $validater->errors();
+			$errors = $valid;
 		}
 	}
 }
 ?>
+
+
 <p style="color:#FF0F13;"><?php
 	if(!empty($errors)){
 		foreach($errors as $error){
@@ -58,14 +56,13 @@ if(Input::exists()){
 	}
 ?></p>
 <form action="" method="post">
-	<input type="text" name="username" value="<?php echo escape(Input::get("username"));?>">
-    <input type="password" name="password">
-    <input type="password" name="password2">
-    <input type="text" name="email" value="<?php echo escape(Input::get("email"));?>">
+	<input type="text" name="Username" value="<?php echo escape(Input::get("username"));?>"><br>
+    <input type="password" name="Password"><br>
+    <input type="password" name="Password2"><br>
     <input type="hidden" name="token" value="<?php echo Token::generate();?>">
     
     <input type="submit">
 </form>
 <?php 
-require_once $_SERVER['DOCUMENT_ROOT']  . "/includes/footer.php"; //Initialize
+require_once "/includes/footer.php"; //Initialize
 ?>

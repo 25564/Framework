@@ -15,7 +15,8 @@ class DB implements Countable, arrayaccess, Iterator {
 			$_results, //Result of the query
 			$_columns = "*", //Columns being returned. This can be altered by pluck()
 			$_table = null, //Table query acts upon
-			$_position = 0; //Current Array iterator increment
+			$_position = 0, //Current Array iterator increment
+			$_Array = false;
 
 	private function __construct() {
 		try { //Try DB Connection with Config settings
@@ -60,7 +61,11 @@ class DB implements Countable, arrayaccess, Iterator {
 	public function raw($sql,  $params = array()){
 		//Raw query
 		$this->query($sql,  $params);
-		$this->_results = $this->_query->fetchAll(PDO::FETCH_OBJ);
+		if($this->_Array === false){
+			$this->_results = $this->_query->fetchAll(PDO::FETCH_OBJ);
+		} else {
+			$this->_results = $this->_query->fetchAll();
+		}
 		$this->clearQuery();
 		return $this->results();
 	}
@@ -81,9 +86,18 @@ class DB implements Countable, arrayaccess, Iterator {
 			$sql = "SELECT ".$this->_columns." FROM ".$this->_table." ".$this->_query." LIMIT " . $this->_start . ",".$number;
 		}
 		$Query = $this->query($sql);
-		$this->_results = $this->_query->fetchAll(PDO::FETCH_OBJ);
+		if($this->_Array === false){
+			$this->_results = $this->_query->fetchAll(PDO::FETCH_OBJ);
+		} else {
+			$this->_results = $this->_query->fetchAll();
+		}
 		$this->clearQuery();
 		return $this->_results;
+	}
+
+	public function FetchArray($Mode){
+		$this->_Array = $Mode;
+		return $this;
 	}
 	
 	public function update(array $data){//Update row data
@@ -137,6 +151,13 @@ class DB implements Countable, arrayaccess, Iterator {
 		return $this->_pdo->lastInsertId();
 	}
 	
+	public function exists($key = false, $operator = false, $value = false){
+		if($key != false && $operator != false){
+			$this->where($key, $operator, $value);
+		}
+		$result = $this->count();
+		return ($result > 0) ? true : false;
+	}
 //Query Builder functions
 
 	public function table($table) {//Set the table that is being acted upon

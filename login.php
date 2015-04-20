@@ -1,39 +1,43 @@
 <?php 
-require_once $_SERVER['DOCUMENT_ROOT']  . "/includes/header.php"; //Initialize
+require_once "/includes/header.php"; //Initialize
 
 if(Input::exists()){
-	$validater = new Validate();
+	$validater = new Validation();
 	if(Token::check(Input::get("token"))){
-		$valid = $validater->check($_POST, array(
-			'username' => array(
-				'required' => true, //Is required
-				'min' 	   => 3,	//Minium length
-				'max' 	   => 35,	//Maximum Length
-				'exists'   => 'user'
+		$valid = $validater->Validate($_POST, array(
+			'Username' => array(
+				'required' => true,   	//Is required
+				'min' 	   => 3,	  	//Minium length
+				'max' 	   => 35,	  	//Maximum Length
+				'exists'   => array(	//Must exists
+					"Value" => 'Users',
+					'CustomError'=> "{Value} is not a registered User"
+				)
 			),
-			'password' => array(
+			'Password' => array(
 				'required' => true,
 				'min' 	   => 5,
-				'differ'   => 'username' //Cannot be the same as username
-			),
+				'differs'   => 'Username' //Cannot be the same as username
+			),		
 		));
-		if($validater->passed()){
+		if($valid === true){
+			//Attempt to Authenticate
 			$user = new User();
-			$user->attachObserver(new Observer_GroupType);
-			$user->attachObserver(new Observer_SecureKey);
-			$authenticated = $user->login(Input::get("username"), Input::get("password"), Input::get("remember"));
-			if($authenticated){
-				Session::flash('homeMessage', 'You were logged in successfully.');
-				Redirect::to("home");
-			} else {
-				$errors = array($user->error());	
+			try {
+				$Authenticated = $user->Authenticate(escape(Input::get("Username")), escape(Input::get("Password")), Input::get("remember"));
+				if($Authenticated !== false){
+					Redirect::to("home");
+				}
+			} catch (Exception $e) {
+				$errors = array($e->getMessage());
 			}
 		} else {
-			$errors = $validater->errors();	
+			$errors = $valid;
 		}
 	}
 }
 ?>
+
 <p style="color:#FF0F13;"><?php
 	if(!empty($errors)){
 		foreach($errors as $error){
@@ -42,8 +46,8 @@ if(Input::exists()){
 	}
 ?></p>
 <form action="" method="post">
-	<input type="text" placeholder="username" name="username" value="<?php echo escape(Input::get("username"));?>">
-    <input type="password" placeholder="password" name="password">
+	<input type="text" placeholder="username" name="Username" value="<?php echo escape(Input::get("username"));?>">
+    <input type="password" placeholder="password" name="Password">
     <br>
     <span>Remember me:</span><input type="checkbox" name="remember">
     <br>
@@ -52,5 +56,5 @@ if(Input::exists()){
     <input type="submit">
 </form>
 <?php 
-require_once $_SERVER['DOCUMENT_ROOT']  . "/includes/footer.php"; //Initialize
+require_once "/includes/footer.php"; //Initialize
 ?>

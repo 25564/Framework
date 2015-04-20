@@ -1,4 +1,4 @@
 Framework
 =========
 
-Its successor is currently being constructed [here](https://github.com/25564/BluePrint)
+This is basically a concept framework to see if I could get something with some cool functionality.

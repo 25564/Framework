@@ -1,4 +1,4 @@
 Framework
 =========
 
-Being restructured for V2. Allowing more depth in Heirachy and more standardised data structure
+This is basically a concept framework to see if I could get something with some cool functionality.

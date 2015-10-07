@@ -25,5 +25,15 @@ class Input {
 		}
 		return ''; 
 	}
+
+	public static function has($key) {
+		//More specific than exists
+		if(isset($_POST[$key])){
+			return true;
+		} elseif(isset($_GET[$key])){
+			return true;
+		}
+		return false; 
+	}
 }
 ?>
